@@ -34,6 +34,7 @@ pipeline {
                 container('builder') {
                     checkout scm
                     sh '''
+                        git config --global --add safe.directory '*'
                         echo
                         echo "Repository Checked Out"
                         echo
@@ -145,6 +146,7 @@ pipeline {
                     fingerprint: true
             )
             cleanWs()
+            deleteDir()
         }
         success {
             echo ""
