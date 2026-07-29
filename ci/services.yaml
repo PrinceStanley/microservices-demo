@@ -1,0 +1,162 @@
+version: "1.0"
+platform:
+  registry: "ucjfrog.exlservice.com"
+  repository: "idp-sandbox"
+  namespace: "online-boutique"
+  imageTagStrategy: "git-commit"
+  defaultDockerfile: "Dockerfile"
+services:
+###############################################################################
+# Frontend
+###############################################################################
+  frontend:
+    enabled: true
+    source: "src/frontend"
+    dockerfile: "src/frontend/Dockerfile"
+    image: "frontend"
+    deployment: "frontend"
+    helm:
+      valuesKey: "frontend.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: true
+###############################################################################
+# Cart Service
+###############################################################################
+  cartservice:
+    enabled: true
+    source: "src/cartservice"
+    dockerfile: "src/cartservice/Dockerfile"
+    image: "cartservice"
+    deployment: "cartservice"
+    helm:
+      valuesKey: "cartservice.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: true
+###############################################################################
+# Product Catalog
+###############################################################################
+  productcatalogservice:
+    enabled: true
+    source: "src/productcatalogservice"
+    dockerfile: "src/productcatalogservice/Dockerfile"
+    image: "productcatalogservice"
+    deployment: "productcatalogservice"
+    helm:
+      valuesKey: "productcatalogservice.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: true
+###############################################################################
+# Currency Service
+###############################################################################
+  currencyservice:
+    enabled: true
+    source: "src/currencyservice"
+    dockerfile: "src/currencyservice/Dockerfile"
+    image: "currencyservice"
+    deployment: "currencyservice"
+    helm:
+      valuesKey: "currencyservice.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: true
+###############################################################################
+# Payment Service
+###############################################################################
+  paymentservice:
+    enabled: true
+    source: "src/paymentservice"
+    dockerfile: "src/paymentservice/Dockerfile"
+    image: "paymentservice"
+    deployment: "paymentservice"
+    helm:
+      valuesKey: "paymentservice.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: true
+###############################################################################
+# Shipping Service
+###############################################################################
+  shippingservice:
+    enabled: true
+    source: "src/shippingservice"
+    dockerfile: "src/shippingservice/Dockerfile"
+    image: "shippingservice"
+    deployment: "shippingservice"
+    helm:
+      valuesKey: "shippingservice.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: true
+###############################################################################
+# Checkout Service
+###############################################################################
+  checkoutservice:
+    enabled: true
+    source: "src/checkoutservice"
+    dockerfile: "src/checkoutservice/Dockerfile"
+    image: "checkoutservice"
+    deployment: "checkoutservice"
+    helm:
+      valuesKey: "checkoutservice.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: true
+###############################################################################
+# Recommendation Service
+###############################################################################
+  recommendationservice:
+    enabled: true
+    source: "src/recommendationservice"
+    dockerfile: "src/recommendationservice/Dockerfile"
+    image: "recommendationservice"
+    deployment: "recommendationservice"
+    helm:
+      valuesKey: "recommendationservice.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: true
+###############################################################################
+# Email Service
+###############################################################################
+  emailservice:
+    enabled: true
+    source: "src/emailservice"
+    dockerfile: "src/emailservice/Dockerfile"
+    image: "emailservice"
+    deployment: "emailservice"
+    helm:
+      valuesKey: "emailservice.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: false
+###############################################################################
+# Ad Service
+###############################################################################
+  adservice:
+    enabled: true
+    source: "src/adservice"
+    dockerfile: "src/adservice/Dockerfile"
+    image: "adservice"
+    deployment: "adservice"
+    helm:
+      valuesKey: "adservice.image.tag"
+    sonar:
+      enabled: true
+    smokeTest: false
+###############################################################################
+# Load Generator
+###############################################################################
+  loadgenerator:
+    enabled: false
+    source: "src/loadgenerator"
+    dockerfile: "src/loadgenerator/Dockerfile"
+    image: "loadgenerator"
+    deployment: "loadgenerator"
+    helm:
+      valuesKey: "loadgenerator.image.tag"
+    sonar:
+      enabled: false
+    smokeTest: false

@@ -2,23 +2,163 @@ pipeline {
     agent {
         kubernetes {
             yamlFile 'jenkins/pod-kaniko.yaml'
+            defaultContainer 'builder'
         }
     }
+    environment {
+        PLATFORM_NAME = "Internal Developer Platform"
+        SERVICES_FILE = "ci/services.yaml"
+        CHANGED_FILE = "changed-services.txt"
+        BUILD_DATE = "${new Date().format("yyyy-MM-dd HH:mm:ss")}"
+    }
+    options {
+        timestamps()
+        ansiColor('xterm')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(
+                numToKeepStr: '20',
+                artifactNumToKeepStr: '20'
+        ))
+        timeout(
+                time: 30,
+                unit: 'MINUTES'
+        )
+        skipDefaultCheckout(true)
+    }
     stages {
-        stage('Builder') {
+        /**********************************************************************
+         * Checkout
+         *********************************************************************/
+        stage('Checkout Source') {
             steps {
                 container('builder') {
-                    sh 'pwd'
-                    sh 'ls -la'
+                    checkout scm
+                    sh '''
+                        echo
+                        echo "Repository Checked Out"
+                        echo
+                        git status
+                        pwd
+                        ls -larth
+                    '''
                 }
             }
         }
-        stage('Kaniko') {
+        /**********************************************************************
+         * Build Information
+         *********************************************************************/
+        stage('Build Information') {
             steps {
-                container('kaniko') {
-                    sh 'ls -la /workspace'
+                container('builder') {
+                    script {
+                        env.GIT_COMMIT_SHORT =
+                                sh(
+                                        script: "git rev-parse --short HEAD",
+                                        returnStdout: true
+                                ).trim()
+                        env.GIT_BRANCH_NAME =
+                                sh(
+                                        script: "git rev-parse --abbrev-ref HEAD",
+                                        returnStdout: true
+                                ).trim()
+                    }
+                    sh '''
+                    echo
+                    echo "========================================="
+                    echo "Platform"
+                    echo "========================================="
+                    echo "Build Number  : ${BUILD_NUMBER}"
+                    echo "Branch        : ${GIT_BRANCH_NAME}"
+                    echo "Commit        : ${GIT_COMMIT_SHORT}"
+                    echo "Workspace     : ${WORKSPACE}"
+                    echo "Node          : ${NODE_NAME}"
+                    echo
+                    '''
                 }
             }
+        }
+        /**********************************************************************
+         * Validate Metadata
+         *********************************************************************/
+        stage('Validate Metadata') {
+            steps {
+                container('builder') {
+                    sh '''
+                    test -f ci/services.yaml
+                    test -f scripts/detect-services.sh
+                    chmod +x scripts/detect-services.sh
+                    echo
+                    echo "Metadata validation successful."
+                    '''
+                }
+            }
+        }
+        /**********************************************************************
+         * Detect Changed Services
+         *********************************************************************/
+        stage('Detect Changed Services') {
+            steps {
+                container('builder') {
+                    sh '''
+                    ./scripts/detect-services.sh
+                    '''
+                }
+            }
+        }
+        /**********************************************************************
+         * Validate Result
+         *********************************************************************/
+        stage('Validate Changed Services') {
+            steps {
+                container('builder') {
+                    script {
+                        if (!fileExists(env.CHANGED_FILE)) {
+                            error("changed-services.txt was not generated.")
+                        }
+                        def services = readFile(env.CHANGED_FILE).trim()
+                        if (!services) {
+                            currentBuild.description =
+                                    "No service changes detected."
+                            echo "No deployable services changed."
+                        } else {
+                            echo ""
+                            echo "Changed Services"
+                            echo ""
+                            echo services
+                            currentBuild.description =
+                                    services.replace("\n", ", ")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts(
+                    artifacts: 'changed-services.txt',
+                    fingerprint: true,
+                    allowEmptyArchive: true
+            )
+            archiveArtifacts(
+                    artifacts: 'ci/services.yaml',
+                    fingerprint: true
+            )
+            cleanWs()
+        }
+        success {
+            echo ""
+            echo "=========================================="
+            echo "Phase 1 completed successfully."
+            echo "=========================================="
+            echo ""
+        }
+        failure {
+            echo ""
+            echo "=========================================="
+            echo "Pipeline failed."
+            echo "=========================================="
+            echo ""
         }
     }
 }

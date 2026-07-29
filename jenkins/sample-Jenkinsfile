@@ -1,0 +1,24 @@
+pipeline {
+    agent {
+        kubernetes {
+            yamlFile 'jenkins/pod-kaniko.yaml'
+        }
+    }
+    stages {
+        stage('Builder') {
+            steps {
+                container('builder') {
+                    sh 'pwd'
+                    sh 'ls -la'
+                }
+            }
+        }
+        stage('Kaniko') {
+            steps {
+                container('kaniko') {
+                    sh 'ls -la /workspace'
+                }
+            }
+        }
+    }
+}
