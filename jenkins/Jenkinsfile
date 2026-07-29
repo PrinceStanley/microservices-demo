@@ -133,11 +133,82 @@ pipeline {
                 }
             }
         }
+        /**********************************************************************
+         * Quality Analysis
+         *********************************************************************/
+        stage('Quality Analysis') {
+            parallel {
+              stage('SonarQube') {
+                  steps {
+                      container('builder') {
+                          withSonarQubeEnv('sonarqube') {
+                              withCredentials([
+                                  string(
+                                      credentialsId: 'sonarqube-token',
+                                      variable: 'SONAR_TOKEN'
+                                  )
+                              ]) {
+                                  sh '''
+                                      chmod +x scripts/run-sonarqube.sh
+                                      ./scripts/run-sonarqube.sh
+                                  '''
+                              }
+                          }
+                      }
+                  }
+              }
+              stage('Secret Scan') {
+                  steps {
+                      container('builder') {
+                          sh '''
+                              chmod +x scripts/run-secret-scan.sh
+                              ./scripts/run-secret-scan.sh
+                          '''
+                      }
+                  }
+              }
+              stage('Dependency Scan') {
+                  steps {
+                      container('builder') {
+                          sh '''
+                              chmod +x scripts/run-dependency-scan.sh
+                              ./scripts/run-dependency-scan.sh
+                          '''
+                      }
+                  }
+              }
+          }
+      }
+      /**********************************************************************
+       * Archive Scan reports
+       *********************************************************************/    
+      stage('Archive Scan Reports') {
+          steps {
+            archiveArtifacts(
+                artifacts: 'reports/**/*',
+                fingerprint: true,
+                allowEmptyArchive: true
+                )
+            }
+        }
+      /**********************************************************************
+       * Sonar Quality Gate
+       *********************************************************************/  
+      stage('Sonar Quality Gate') {
+          steps {
+              timeout(time: 15, unit: 'MINUTES') {
+                  waitForQualityGate abortPipeline: true
+              }
+          }
+       }
     }
     post {
         always {
             archiveArtifacts(
-                    artifacts: 'changed-services.txt',
+                    artifacts: '''
+                        changed-services.txt,
+                        reports/**/*,
+                      ''',
                     fingerprint: true,
                     allowEmptyArchive: true
             )

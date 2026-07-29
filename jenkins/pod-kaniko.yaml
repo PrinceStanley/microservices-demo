@@ -47,7 +47,7 @@ spec:
 
   - name: builder
 
-    image: ucjfrog.exlservice.com/idp-sandbox/ci-builder:v1
+    image: ucjfrog.exlservice.com/idp-sandbox/ci-builder:v2
 
     command:
 
