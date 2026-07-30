@@ -21,25 +21,22 @@ if [[ -z "${PYTHON_BIN}" ]]; then
   fi
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_SCRIPT="${SCRIPT_DIR}/yaml_support.py"
+if [[ ! -f "${PYTHON_SCRIPT}" ]]; then
+  echo "Required helper ${PYTHON_SCRIPT} not found." >&2
+  exit 1
+fi
+
 get_yaml_value() {
   local file="$1"
   local service="$2"
   local field="$3"
-  "${PYTHON_BIN}" - "$file" "$service" "$field" <<'PY'
-import sys
-import yaml
-
-file_path, service, field = sys.argv[1:4]
-with open(file_path, encoding='utf-8') as handle:
-    data = yaml.safe_load(handle) or {}
-
-if service == "__platform__":
-    value = (data.get("platform", {}) or {}).get(field)
-else:
-    value = (data.get("services", {}) or {}).get(service, {}).get(field)
-
-print(value if value is not None else "")
-PY
+  if [[ "${service}" == "__platform__" ]]; then
+    "${PYTHON_BIN}" "${PYTHON_SCRIPT}" --platform-value "$file" "$field"
+  else
+    "${PYTHON_BIN}" "${PYTHON_SCRIPT}" --service-value "$file" "$service" "$field"
+  fi
 }
 
 REGISTRY="${REGISTRY:-$(get_yaml_value "${SERVICES_FILE}" "__platform__" "registry")}" 

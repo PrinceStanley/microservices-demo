@@ -22,6 +22,13 @@ if [[ -z "${PYTHON_BIN}" ]]; then
     fi
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_SCRIPT="${SCRIPT_DIR}/yaml_support.py"
+if [[ ! -f "${PYTHON_SCRIPT}" ]]; then
+    echo "Required helper ${PYTHON_SCRIPT} not found." >&2
+    exit 1
+fi
+
 echo "=========================================================="
 echo " Online Boutique - Service Change Detection"
 echo "=========================================================="
@@ -49,23 +56,7 @@ fi
 
 if [[ "${INITIAL_DEPLOYMENT}" == "true" ]]; then
     echo "Initial deployment requested; selecting enabled services."
-    "${PYTHON_BIN}" - "${SERVICES_FILE}" "${OUTPUT_FILE}" <<'PY'
-import sys
-from pathlib import Path
-import yaml
-
-services_file = Path(sys.argv[1])
-out_file = Path(sys.argv[2])
-with services_file.open(encoding='utf-8') as handle:
-    data = yaml.safe_load(handle) or {}
-
-services = []
-for name, config in sorted((data.get('services', {}) or {}).items()):
-    if config.get('enabled', False):
-        services.append(name)
-
-out_file.write_text('\n'.join(services) + ('\n' if services else ''), encoding='utf-8')
-PY
+    "${PYTHON_BIN}" "${PYTHON_SCRIPT}" --list-enabled-services "${SERVICES_FILE}" "${OUTPUT_FILE}"
     echo
     echo "=========================================================="
     echo "Changed Services"
@@ -112,27 +103,7 @@ echo
 # Extract source directories from services.yaml
 ################################################################################
 echo "Matching services..."
-"${PYTHON_BIN}" - "${SERVICES_FILE}" "${OUTPUT_FILE}" <<'PY' "$CHANGED_FILES"
-import sys
-from pathlib import Path
-import yaml
-
-services_file = Path(sys.argv[1])
-out_file = Path(sys.argv[2])
-changed_files = sys.argv[3].splitlines()
-with services_file.open(encoding='utf-8') as handle:
-    data = yaml.safe_load(handle) or {}
-
-matched = []
-for service, config in sorted((data.get('services', {}) or {}).items()):
-    if not config.get('enabled', False):
-        continue
-    source = config.get('source', '')
-    if any(changed.startswith(f"{source}/") for changed in changed_files if changed):
-        matched.append(service)
-
-out_file.write_text('\n'.join(sorted(set(matched))) + ('\n' if matched else ''), encoding='utf-8')
-PY
+"${PYTHON_BIN}" "${PYTHON_SCRIPT}" --match-services "${SERVICES_FILE}" "${OUTPUT_FILE}" "$CHANGED_FILES"
 
 ################################################################################
 # Display result
