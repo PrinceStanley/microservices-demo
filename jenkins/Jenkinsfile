@@ -16,6 +16,7 @@ pipeline {
         IMAGE_TAG = "${env.GIT_COMMIT_SHORT ?: 'latest'}"
         NAMESPACE = "online-boutique"
         ARGOCD_APP_NAME = "online-boutique"
+        INITIAL_DEPLOYMENT = "false"
     }
     options {
         timestamps()
@@ -101,13 +102,39 @@ pipeline {
             }
         }
         /**********************************************************************
+         * Resolve Deployment Mode
+         *********************************************************************/
+        stage('Resolve Deployment Mode') {
+            steps {
+                container('builder') {
+                    script {
+                        def namespaceExists = sh(
+                                script: "kubectl get namespace ${env.NAMESPACE} >/dev/null 2>&1; echo $?",
+                                returnStdout: true
+                        ).trim()
+                        def appExists = sh(
+                                script: "kubectl -n ${env.NAMESPACE} get deployment frontend >/dev/null 2>&1; echo $?",
+                                returnStdout: true
+                        ).trim()
+                        env.INITIAL_DEPLOYMENT = (namespaceExists == '0' && appExists == '0') ? 'false' : 'true'
+                        if (env.INITIAL_DEPLOYMENT == 'true') {
+                            echo "Initial deployment required for namespace ${env.NAMESPACE}."
+                        } else {
+                            echo "Incremental deployment mode enabled."
+                        }
+                    }
+                }
+            }
+        }
+        /**********************************************************************
          * Detect Changed Services
          *********************************************************************/
         stage('Detect Changed Services') {
             steps {
                 container('builder') {
                     sh '''
-                    ./scripts/detect-services.sh
+                    chmod +x scripts/detect-services.sh
+                    INITIAL_DEPLOYMENT="${INITIAL_DEPLOYMENT}" ./scripts/detect-services.sh
                     '''
                 }
             }
@@ -214,7 +241,7 @@ pipeline {
        stage('Build and Publish Images') {
            when {
                expression {
-                   fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim()
+                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
                }
            }
            steps {
@@ -234,7 +261,7 @@ pipeline {
        stage('Update GitOps Manifests') {
            when {
                expression {
-                   fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim()
+                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
                }
            }
            steps {
@@ -248,12 +275,31 @@ pipeline {
        }
 
        /**********************************************************************
+        * Deploy to EKS
+        *********************************************************************/
+       stage('Deploy to EKS') {
+           when {
+               expression {
+                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
+               }
+           }
+           steps {
+               container('builder') {
+                   sh '''
+                       chmod +x scripts/deploy-eks.sh
+                       ./scripts/deploy-eks.sh
+                   '''
+               }
+           }
+       }
+
+       /**********************************************************************
         * Sync ArgoCD Application
         *********************************************************************/
        stage('Sync ArgoCD Application') {
            when {
                expression {
-                   fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim()
+                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
                }
            }
            steps {
@@ -274,7 +320,7 @@ pipeline {
        stage('Validate Deployment Rollout') {
            when {
                expression {
-                   fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim()
+                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
                }
            }
            steps {

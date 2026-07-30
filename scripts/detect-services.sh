@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -Eeuo pipefail
 
 ################################################################################
 # Enterprise Service Change Detection
 ################################################################################
 
-SERVICES_FILE="ci/services.yaml"
-OUTPUT_FILE="changed-services.txt"
+SERVICES_FILE="${SERVICES_FILE:-ci/services.yaml}"
+OUTPUT_FILE="${OUTPUT_FILE:-changed-services.txt}"
+INITIAL_DEPLOYMENT="${INITIAL_DEPLOYMENT:-false}"
+
+PYTHON_BIN="${PYTHON_BIN:-}"
+if [[ -z "${PYTHON_BIN}" ]]; then
+    if command -v python3 >/dev/null 2>&1; then
+        PYTHON_BIN="python3"
+    elif command -v python >/dev/null 2>&1; then
+        PYTHON_BIN="python"
+    else
+        echo "Python is required to parse ${SERVICES_FILE}." >&2
+        exit 1
+    fi
+fi
 
 echo "=========================================================="
 echo " Online Boutique - Service Change Detection"
@@ -32,6 +45,38 @@ fi
 if [[ ! -f "${SERVICES_FILE}" ]]; then
     echo "ERROR: ${SERVICES_FILE} not found."
     exit 1
+fi
+
+if [[ "${INITIAL_DEPLOYMENT}" == "true" ]]; then
+    echo "Initial deployment requested; selecting enabled services."
+    "${PYTHON_BIN}" - "${SERVICES_FILE}" "${OUTPUT_FILE}" <<'PY'
+import sys
+from pathlib import Path
+import yaml
+
+services_file = Path(sys.argv[1])
+out_file = Path(sys.argv[2])
+with services_file.open(encoding='utf-8') as handle:
+    data = yaml.safe_load(handle) or {}
+
+services = []
+for name, config in sorted((data.get('services', {}) or {}).items()):
+    if config.get('enabled', False):
+        services.append(name)
+
+out_file.write_text('\n'.join(services) + ('\n' if services else ''), encoding='utf-8')
+PY
+    echo
+    echo "=========================================================="
+    echo "Changed Services"
+    echo "=========================================================="
+    cat "${OUTPUT_FILE}"
+    echo
+    echo "Output File"
+    echo "${OUTPUT_FILE}"
+    echo
+    echo "Done."
+    exit 0
 fi
 
 ################################################################################
@@ -67,22 +112,27 @@ echo
 # Extract source directories from services.yaml
 ################################################################################
 echo "Matching services..."
-SERVICE_NAMES=$(yq e '.services | keys | .[]' "${SERVICES_FILE}")
-for SERVICE in ${SERVICE_NAMES}; do
-    ENABLED=$(yq e ".services.${SERVICE}.enabled" "${SERVICES_FILE}")
-    if [[ "${ENABLED}" != "true" ]]; then
-        continue
-    fi
-    SOURCE=$(yq e ".services.${SERVICE}.source" "${SERVICES_FILE}")
-    if echo "${CHANGED_FILES}" | grep -q "^${SOURCE}/"; then
-        echo "${SERVICE}" >> "${OUTPUT_FILE}"
-    fi
-done
-################################################################################
-# Remove duplicates
-################################################################################
+"${PYTHON_BIN}" - "${SERVICES_FILE}" "${OUTPUT_FILE}" <<'PY' "$CHANGED_FILES"
+import sys
+from pathlib import Path
+import yaml
 
-sort -u "${OUTPUT_FILE}" -o "${OUTPUT_FILE}"
+services_file = Path(sys.argv[1])
+out_file = Path(sys.argv[2])
+changed_files = sys.argv[3].splitlines()
+with services_file.open(encoding='utf-8') as handle:
+    data = yaml.safe_load(handle) or {}
+
+matched = []
+for service, config in sorted((data.get('services', {}) or {}).items()):
+    if not config.get('enabled', False):
+        continue
+    source = config.get('source', '')
+    if any(changed.startswith(f"{source}/") for changed in changed_files if changed):
+        matched.append(service)
+
+out_file.write_text('\n'.join(sorted(set(matched))) + ('\n' if matched else ''), encoding='utf-8')
+PY
 
 ################################################################################
 # Display result
