@@ -127,7 +127,7 @@ pipeline {
                                 def workloadCount = sh(
                                         script: """
                                             set +e
-                                            count=$(kubectl get deployment,statefulset,daemonset -n ${env.NAMESPACE} -o name --ignore-not-found 2>/dev/null | wc -l | tr -d ' ')
+                                            count=\$(kubectl get deployment,statefulset,daemonset -n ${env.NAMESPACE} -o name --ignore-not-found 2>/dev/null | wc -l | tr -d ' ')
                                             echo "${count}"
                                             exit 0
                                         """,
