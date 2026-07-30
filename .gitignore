@@ -27,3 +27,7 @@ pkg/
 release/wi-kubernetes-manifests.yaml
 vendor/
 gha-creds-*.json
+changed-services.txt
+reports/images/
+*.scannerwork/
+*.tmp

@@ -10,6 +10,12 @@ pipeline {
         SERVICES_FILE = "ci/services.yaml"
         CHANGED_FILE = "changed-services.txt"
         BUILD_DATE = "${new Date().format("yyyy-MM-dd HH:mm:ss")}"
+        REGISTRY = "ucjfrog.exlservice.com"
+        REPOSITORY = "idp-sandbox"
+        IMAGE_NAMESPACE = "online-boutique"
+        IMAGE_TAG = "${env.GIT_COMMIT_SHORT ?: 'latest'}"
+        NAMESPACE = "online-boutique"
+        ARGOCD_APP_NAME = "online-boutique"
     }
     options {
         timestamps()
@@ -200,6 +206,85 @@ pipeline {
                   waitForQualityGate abortPipeline: true
               }
           }
+       }
+
+       /**********************************************************************
+        * Build and Publish Container Images
+        *********************************************************************/
+       stage('Build and Publish Images') {
+           when {
+               expression {
+                   fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim()
+               }
+           }
+           steps {
+               container('builder') {
+                   sh '''
+                       chmod +x scripts/build-images.sh scripts/push-images.sh
+                       ./scripts/build-images.sh
+                       ./scripts/push-images.sh
+                   '''
+               }
+           }
+       }
+
+       /**********************************************************************
+        * Update GitOps Manifests
+        *********************************************************************/
+       stage('Update GitOps Manifests') {
+           when {
+               expression {
+                   fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim()
+               }
+           }
+           steps {
+               container('builder') {
+                   sh '''
+                       chmod +x scripts/update-helm.sh
+                       ./scripts/update-helm.sh
+                   '''
+               }
+           }
+       }
+
+       /**********************************************************************
+        * Sync ArgoCD Application
+        *********************************************************************/
+       stage('Sync ArgoCD Application') {
+           when {
+               expression {
+                   fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim()
+               }
+           }
+           steps {
+               container('builder') {
+                   withCredentials([string(credentialsId: 'argocd-admin-password', variable: 'ARGOCD_PASSWORD')]) {
+                       sh '''
+                           chmod +x scripts/sync-argocd.sh
+                           ARGOCD_PASSWORD="${ARGOCD_PASSWORD}" ./scripts/sync-argocd.sh
+                       '''
+                   }
+               }
+           }
+       }
+
+       /**********************************************************************
+        * Validate Deployment Rollout
+        *********************************************************************/
+       stage('Validate Deployment Rollout') {
+           when {
+               expression {
+                   fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim()
+               }
+           }
+           steps {
+               container('builder') {
+                   sh '''
+                       chmod +x scripts/validate-deployment.sh
+                       ./scripts/validate-deployment.sh
+                   '''
+               }
+           }
        }
     }
     post {
