@@ -115,6 +115,7 @@ pipeline {
                         if (kubectlAvailable != '0') {
                             env.INITIAL_DEPLOYMENT = 'true'
                             echo "Initial deployment required: kubectl is unavailable."
+                            writeFile file: '.deployment-mode', text: 'true'
                         } else {
                             def namespaceExists = sh(
                                     script: "set +e; kubectl get namespace ${env.NAMESPACE} >/dev/null 2>&1; status=\$?; echo \$status; exit 0",
@@ -123,6 +124,7 @@ pipeline {
                             if (namespaceExists != '0') {
                                 env.INITIAL_DEPLOYMENT = 'true'
                                 echo "Initial deployment required: namespace ${env.NAMESPACE} is missing."
+                                writeFile file: '.deployment-mode', text: 'true'
                             } else {
                                 def workloadCount = sh(
                                         script: """
@@ -140,6 +142,7 @@ pipeline {
                                 } else {
                                     echo "Incremental deployment mode enabled."
                                 }
+                                writeFile file: '.deployment-mode', text: env.INITIAL_DEPLOYMENT
                             }
                         }
                     }
@@ -152,10 +155,12 @@ pipeline {
         stage('Detect Changed Services') {
             steps {
                 container('builder') {
-                    sh '''
-                    chmod +x scripts/detect-services.sh
-                    INITIAL_DEPLOYMENT="${INITIAL_DEPLOYMENT}" ./scripts/detect-services.sh
-                    '''
+                    withEnv(["INITIAL_DEPLOYMENT=${env.INITIAL_DEPLOYMENT}"]) {
+                        sh '''
+                        chmod +x scripts/detect-services.sh
+                        ./scripts/detect-services.sh
+                        '''
+                    }
                 }
             }
         }
@@ -258,12 +263,13 @@ pipeline {
        /**********************************************************************
         * Build and Publish Container Images
         *********************************************************************/
-       stage('Build and Publish Images') {
-           when {
-               expression {
-                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
-               }
-           }
+        stage('Build and Publish Images') {
+            when {
+                expression {
+                    def deploymentMode = fileExists('.deployment-mode') ? readFile('.deployment-mode').trim() : 'false'
+                    return deploymentMode == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
+                }
+            }
            steps {
                container('builder') {
                    sh '''
@@ -278,12 +284,13 @@ pipeline {
        /**********************************************************************
         * Update GitOps Manifests
         *********************************************************************/
-       stage('Update GitOps Manifests') {
-           when {
-               expression {
-                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
-               }
-           }
+        stage('Update GitOps Manifests') {
+            when {
+                expression {
+                    def deploymentMode = fileExists('.deployment-mode') ? readFile('.deployment-mode').trim() : 'false'
+                    return deploymentMode == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
+                }
+            }
            steps {
                container('builder') {
                    sh '''
@@ -297,12 +304,13 @@ pipeline {
        /**********************************************************************
         * Deploy to EKS
         *********************************************************************/
-       stage('Deploy to EKS') {
-           when {
-               expression {
-                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
-               }
-           }
+        stage('Deploy to EKS') {
+            when {
+                expression {
+                    def deploymentMode = fileExists('.deployment-mode') ? readFile('.deployment-mode').trim() : 'false'
+                    return deploymentMode == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
+                }
+            }
            steps {
                container('builder') {
                    sh '''
@@ -316,12 +324,13 @@ pipeline {
        /**********************************************************************
         * Sync ArgoCD Application
         *********************************************************************/
-       stage('Sync ArgoCD Application') {
-           when {
-               expression {
-                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
-               }
-           }
+        stage('Sync ArgoCD Application') {
+            when {
+                expression {
+                    def deploymentMode = fileExists('.deployment-mode') ? readFile('.deployment-mode').trim() : 'false'
+                    return deploymentMode == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
+                }
+            }
            steps {
                container('builder') {
                    withCredentials([string(credentialsId: 'argocd-admin-password', variable: 'ARGOCD_PASSWORD')]) {
@@ -337,12 +346,13 @@ pipeline {
        /**********************************************************************
         * Validate Deployment Rollout
         *********************************************************************/
-       stage('Validate Deployment Rollout') {
-           when {
-               expression {
-                   env.INITIAL_DEPLOYMENT == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
-               }
-           }
+        stage('Validate Deployment Rollout') {
+            when {
+                expression {
+                    def deploymentMode = fileExists('.deployment-mode') ? readFile('.deployment-mode').trim() : 'false'
+                    return deploymentMode == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
+                }
+            }
            steps {
                container('builder') {
                    sh '''
