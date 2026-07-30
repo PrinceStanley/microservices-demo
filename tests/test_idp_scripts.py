@@ -16,4 +16,9 @@ for path in scripts:
     if 'set -Eeuo pipefail' not in content:
         raise SystemExit(f'{path} is missing strict shell guards')
 
+sonar_script = repo / 'scripts' / 'run-sonarqube.sh'
+sonar_content = sonar_script.read_text(encoding='utf-8')
+if 'sonar.token' not in sonar_content or 'sonar.exclusions' not in sonar_content:
+    raise SystemExit('SonarQube scanner configuration is missing token and exclusion settings')
+
 print('IDP automation scripts verified successfully.')
