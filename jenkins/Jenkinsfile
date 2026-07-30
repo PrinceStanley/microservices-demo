@@ -108,19 +108,39 @@ pipeline {
             steps {
                 container('builder') {
                     script {
-                        def namespaceExists = sh(
-                                script: "set +e; kubectl get namespace ${env.NAMESPACE} >/dev/null 2>&1; status=\$?; echo \$status; exit 0",
+                        def kubectlAvailable = sh(
+                                script: "set +e; command -v kubectl >/dev/null 2>&1; status=\$?; echo \$status; exit 0",
                                 returnStdout: true
                         ).trim()
-                        def appExists = sh(
-                                script: "set +e; kubectl -n ${env.NAMESPACE} get deployment frontend >/dev/null 2>&1; status=\$?; echo \$status; exit 0",
-                                returnStdout: true
-                        ).trim()
-                        env.INITIAL_DEPLOYMENT = (namespaceExists == '0' && appExists == '0') ? 'false' : 'true'
-                        if (env.INITIAL_DEPLOYMENT == 'true') {
-                            echo "Initial deployment required for namespace ${env.NAMESPACE}."
+                        if (kubectlAvailable != '0') {
+                            env.INITIAL_DEPLOYMENT = 'true'
+                            echo "Initial deployment required: kubectl is unavailable."
                         } else {
-                            echo "Incremental deployment mode enabled."
+                            def namespaceExists = sh(
+                                    script: "set +e; kubectl get namespace ${env.NAMESPACE} >/dev/null 2>&1; status=\$?; echo \$status; exit 0",
+                                    returnStdout: true
+                            ).trim()
+                            if (namespaceExists != '0') {
+                                env.INITIAL_DEPLOYMENT = 'true'
+                                echo "Initial deployment required: namespace ${env.NAMESPACE} is missing."
+                            } else {
+                                def workloadCount = sh(
+                                        script: """
+                                            set +e
+                                            count=$(kubectl get deployment,statefulset,daemonset -n ${env.NAMESPACE} -o name --ignore-not-found 2>/dev/null | wc -l | tr -d ' ')
+                                            echo "${count}"
+                                            exit 0
+                                        """,
+                                        returnStdout: true
+                                ).trim()
+                                def workloadCountValue = workloadCount.isInteger() ? workloadCount.toInteger() : 0
+                                env.INITIAL_DEPLOYMENT = workloadCountValue > 0 ? 'false' : 'true'
+                                if (env.INITIAL_DEPLOYMENT == 'true') {
+                                    echo "Initial deployment required for namespace ${env.NAMESPACE}: no app workloads detected."
+                                } else {
+                                    echo "Incremental deployment mode enabled."
+                                }
+                            }
                         }
                     }
                 }

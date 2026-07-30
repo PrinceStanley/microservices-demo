@@ -246,7 +246,7 @@ def main() -> None:
     parser.add_argument('--service-value', nargs=3)
     parser.add_argument('--list-enabled-services', nargs=2)
     parser.add_argument('--match-services', nargs=3)
-    parser.add_argument('--update-helm-values', nargs=6)
+    parser.add_argument('--update-helm-values', nargs=5)
     args = parser.parse_args()
 
     if args.platform_value:

@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import textwrap
 from pathlib import Path
@@ -94,6 +95,53 @@ def test_detect_services_initial_deployment() -> None:
         )
         changed_services = (tmp_path / 'changed-services.txt').read_text(encoding='utf-8').splitlines()
         assert changed_services == ['frontend'], result.stdout + result.stderr
+
+
+def test_update_helm_values_cli_accepts_script_arguments() -> None:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        (tmp_path / 'ci').mkdir(parents=True, exist_ok=True)
+        services_file = tmp_path / 'ci' / 'services.yaml'
+        services_file.write_text(
+            textwrap.dedent(
+                '''
+                version: "1.0"
+                platform:
+                  registry: "example.com"
+                services:
+                  frontend:
+                    enabled: true
+                    helm:
+                      valuesKey: "frontend.image.tag"
+                '''
+            ).strip() + '\n',
+            encoding='utf-8',
+        )
+        values_file = tmp_path / 'values.yaml'
+        values_file.write_text('frontend:\n  image:\n    tag: "old"\n', encoding='utf-8')
+        changed_file = tmp_path / 'changed-services.txt'
+        changed_file.write_text('frontend\n', encoding='utf-8')
+        report_dir = tmp_path / 'reports' / 'images'
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(repo / 'scripts' / 'yaml_support.py'),
+                '--update-helm-values',
+                str(services_file),
+                str(values_file),
+                '1.2.3',
+                str(report_dir),
+                str(changed_file),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert (report_dir / 'helm-values-overrides.yaml').read_text(encoding='utf-8') == 'frontend: 1.2.3\n'
+        assert 'tag: 1.2.3' in values_file.read_text(encoding='utf-8')
 
 
 scripts = [
