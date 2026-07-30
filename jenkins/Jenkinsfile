@@ -109,11 +109,11 @@ pipeline {
                 container('builder') {
                     script {
                         def namespaceExists = sh(
-                                script: "kubectl get namespace ${env.NAMESPACE} >/dev/null 2>&1; echo \$?",
+                                script: "set +e; kubectl get namespace ${env.NAMESPACE} >/dev/null 2>&1; status=\$?; echo \$status; exit 0",
                                 returnStdout: true
                         ).trim()
                         def appExists = sh(
-                                script: "kubectl -n ${env.NAMESPACE} get deployment frontend >/dev/null 2>&1; echo \$?",
+                                script: "set +e; kubectl -n ${env.NAMESPACE} get deployment frontend >/dev/null 2>&1; status=\$?; echo \$status; exit 0",
                                 returnStdout: true
                         ).trim()
                         env.INITIAL_DEPLOYMENT = (namespaceExists == '0' && appExists == '0') ? 'false' : 'true'
