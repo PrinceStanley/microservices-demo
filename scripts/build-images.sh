@@ -131,19 +131,23 @@ for SERVICE in "${SERVICES[@]}"; do
   if [[ -n "${KANIKO_DOCKER_CONFIG}" ]] && [[ -f "${KANIKO_DOCKER_CONFIG}/config.json" ]]; then
     CLEAN_CONFIG_DIR="$(mktemp -d)"
     python3 -c "
-import json, sys, os
+import json, sys, os, shutil
 src = sys.argv[1]
 dst = sys.argv[2]
+cfg_dir = sys.argv[3]
 with open(src) as f:
     cfg = json.load(f)
-auths = cfg.get('auths', {})
-clean = {'auths': {}}
-for host, info in auths.items():
-    clean_host = host.replace('https://', 'http://').replace('http://', '')
-    clean['auths'][clean_host] = info
+for key in ['credHelpers', 'credsStore', 'HttpHeaders']:
+    cfg.pop(key, None)
+cfg['auths'] = {}
+for host in ['ucjfrog.exlservice.com', 'index.docker.io', 'docker.io', 'gcr.io', 'mcr.microsoft.com']:
+    cfg['auths'][host] = {}
 with open(dst, 'w') as f:
-    json.dump(clean, f)
-" "${KANIKO_DOCKER_CONFIG}/config.json" "${CLEAN_CONFIG_DIR}/config.json"
+    json.dump(cfg, f, indent=2)
+for fname in os.listdir(cfg_dir):
+    if fname != 'config.json' and 'credential' not in fname.lower() and 'credhelper' not in fname.lower():
+        shutil.copy(os.path.join(cfg_dir, fname), os.path.join(dst, fname))
+" "${KANIKO_DOCKER_CONFIG}/config.json" "${CLEAN_CONFIG_DIR}/config.json" "${KANIKO_DOCKER_CONFIG}"
     KANIKO_ARGS+=(--dockerconfig="${CLEAN_CONFIG_DIR}")
   elif [[ -n "${KANIKO_DOCKER_CONFIG}" ]]; then
     KANIKO_ARGS+=(--dockerconfig="${KANIKO_DOCKER_CONFIG}")
