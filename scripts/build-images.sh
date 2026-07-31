@@ -109,7 +109,7 @@ for SERVICE in "${SERVICES[@]}"; do
     --cache=true
     --cache-repo="${IMAGE_REPOSITORY}:cache"
     --insecure
-    --skip-push-check
+    --skip-push-permission-check
     --destination="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
     --destination="${IMAGE_REPOSITORY}:${BUILD_NUMBER}"
     --destination="${IMAGE_REPOSITORY}:latest"
