@@ -3,5 +3,7 @@
 **/bin/
 **/obj/
 **/out/
+**/*.sln
+tests/
 src/
 Dockerfile*
