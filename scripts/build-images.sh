@@ -116,6 +116,8 @@ for SERVICE in "${SERVICES[@]}"; do
 
   if [[ -n "${DOCKER_CONFIG:-}" ]]; then
     KANIKO_ARGS+=(--dockerconfig="${DOCKER_CONFIG}")
+  elif [[ -d "/kaniko/.docker" ]]; then
+    KANIKO_ARGS+=(--dockerconfig="/kaniko/.docker")
   fi
 
   if [[ "${EXECUTOR_PREFIX[0]}" == "kubectl" ]]; then

@@ -11,6 +11,14 @@ spec:
   securityContext:
     fsGroup: 1000
 
+  # Map the JFrog registry hostname to its internal VPC IP so Kaniko can resolve it.
+  # Replace 192.168.1.100 with the actual IP of your ucjfrog.exlservice.com server.
+  extraHosts:
+
+  - hostnames:
+    - ucjfrog.exlservice.com
+    ip: 10.0.3.100
+
   volumes:
 
     - name: workspace-volume
