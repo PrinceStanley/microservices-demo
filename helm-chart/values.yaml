@@ -17,7 +17,7 @@
 # Declare variables to be passed into your templates.
 
 images:
-  repository: us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo
+  repository: ucjfrog.exlservice.com/idp-sandbox/online-boutique
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
@@ -142,7 +142,7 @@ frontend:
 loadGenerator:
   create: true
   name: loadgenerator
-  checkFrontendInitContainer: true
+  checkFrontendInitContainer: false
   resources:
     requests:
       cpu: 300m
