@@ -43,7 +43,11 @@ get_yaml_value() {
 }
 
 list_enabled_services() {
-  "${PYTHON_BIN}" "${PYTHON_SCRIPT}" --list-enabled-services "$SERVICES_FILE"
+  local out_file
+  out_file="$(mktemp)"
+  "${PYTHON_BIN}" "${PYTHON_SCRIPT}" --list-enabled-services "$SERVICES_FILE" "$out_file"
+  cat "$out_file"
+  rm -f "$out_file"
 }
 
 if [[ -z "${NAMESPACE}" ]]; then
