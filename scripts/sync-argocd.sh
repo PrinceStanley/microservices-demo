@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
 ARGOCD_SERVER="${ARGOCD_SERVER:-argocd-server.argocd.svc.cluster.local}"
-ARGOCD_PORT="${ARGOCD_PORT:-443}"
+ARGOCD_PORT="${ARGOCD_PORT:-80}"
 ARGOCD_APP_NAME="${ARGOCD_APP_NAME:-online-boutique}"
 ARGOCD_USERNAME="${ARGOCD_USERNAME:-admin}"
 ARGOCD_PASSWORD="${ARGOCD_PASSWORD:-}"
@@ -23,7 +23,7 @@ fi
 argocd login "${ARGOCD_SERVER}:${ARGOCD_PORT}" \
   --username "${ARGOCD_USERNAME}" \
   --password "${ARGOCD_PASSWORD}" \
-  --insecure \
+  --plaintext \
   --grpc-web
 
 argocd app sync "${ARGOCD_APP_NAME}" --prune --retry-limit 3 --timeout 600

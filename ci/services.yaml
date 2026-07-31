@@ -150,7 +150,7 @@ services:
 # Load Generator
 ###############################################################################
   loadgenerator:
-    enabled: false
+    enabled: true
     source: "src/loadgenerator"
     dockerfile: "src/loadgenerator/Dockerfile"
     image: "loadgenerator"

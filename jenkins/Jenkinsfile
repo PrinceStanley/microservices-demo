@@ -95,7 +95,8 @@ pipeline {
                     sh '''
                     test -f ci/services.yaml
                     test -f scripts/detect-services.sh
-                    chmod +x scripts/detect-services.sh
+                    test -f scripts/check-running-pods.sh
+                    chmod +x scripts/detect-services.sh scripts/check-running-pods.sh
                     echo
                     echo "Metadata validation successful."
                     '''
@@ -127,23 +128,21 @@ pipeline {
                                 echo "Initial deployment required: namespace ${env.NAMESPACE} is missing."
                                 writeFile file: '.deployment-mode', text: 'true'
                             } else {
-                                def workloadCount = sh(
-                                        script: """
-                                            set +e
-                                            count=\$(kubectl get deployment,statefulset,daemonset -n ${env.NAMESPACE} -o name --ignore-not-found 2>/dev/null | wc -l | tr -d ' ')
-                                            echo "${count}"
-                                            exit 0
-                                        """,
+                                sh 'chmod +x scripts/check-running-pods.sh'
+                                def missingCount = sh(
+                                        script: "set +e; scripts/check-running-pods.sh ci/services.yaml ${env.NAMESPACE}; exit 0",
                                         returnStdout: true
                                 ).trim()
-                                def workloadCountValue = workloadCount.isInteger() ? workloadCount.toInteger() : 0
-                                env.INITIAL_DEPLOYMENT = workloadCountValue > 0 ? 'false' : 'true'
-                                if (env.INITIAL_DEPLOYMENT == 'true') {
-                                    echo "Initial deployment required for namespace ${env.NAMESPACE}: no app workloads detected."
+                                def missingCountValue = missingCount.isInteger() ? missingCount.toInteger() : 0
+                                if (missingCountValue > 0) {
+                                    env.INITIAL_DEPLOYMENT = 'true'
+                                    echo "Initial deployment required for namespace ${env.NAMESPACE}: ${missingCountValue} services have no running pods."
+                                    writeFile file: '.deployment-mode', text: 'true'
                                 } else {
+                                    env.INITIAL_DEPLOYMENT = 'false'
                                     echo "Incremental deployment mode enabled."
+                                    writeFile file: '.deployment-mode', text: 'false'
                                 }
-                                writeFile file: '.deployment-mode', text: env.INITIAL_DEPLOYMENT
                             }
                         }
                     }
