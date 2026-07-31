@@ -16,6 +16,8 @@ pipeline {
         NAMESPACE = "online-boutique"
         ARGOCD_APP_NAME = "online-boutique"
         INITIAL_DEPLOYMENT = "false"
+        JFROG_REGISTRY_HOST = "ucjfrog.exlservice.com"
+        JFROG_REGISTRY_IP = "10.0.3.100"
     }
     options {
         timestamps()

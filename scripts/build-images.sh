@@ -123,6 +123,10 @@ for SERVICE in "${SERVICES[@]}"; do
   if [[ "${EXECUTOR_PREFIX[0]}" == "kubectl" ]]; then
     echo "Executing Kaniko via kubectl in pod ${POD_NAME}, container ${KANIKO_CONTAINER}" >&2
     set +e
+    if [[ -n "${JFROG_REGISTRY_HOST:-}" ]] && [[ -n "${JFROG_REGISTRY_IP:-}" ]]; then
+      kubectl exec "${POD_NAME}" -c "${KANIKO_CONTAINER}" -- /bin/sh -c \
+        "echo '${JFROG_REGISTRY_IP} ${JFROG_REGISTRY_HOST}' >> /etc/hosts" >/dev/null 2>&1 || true
+    fi
     "${EXECUTOR_PREFIX[@]}" "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
     BUILD_EXIT_CODE=$?
     set -e
