@@ -69,6 +69,8 @@ fi
 
 POD_NAME="${POD_NAME:-$(hostname)}"
 
+KANIKO_PUSH_RETRIES="${KANIKO_PUSH_RETRIES:-10}"
+
 if [[ -x "/kaniko/executor" ]]; then
   EXECUTOR_PREFIX=(/kaniko/executor)
 elif command -v kubectl >/dev/null 2>&1 && kubectl get pod "${POD_NAME}" >/dev/null 2>&1; then
@@ -116,7 +118,7 @@ for SERVICE in "${SERVICES[@]}"; do
     --cache-repo="${IMAGE_REPOSITORY}:cache"
     --insecure
     --skip-push-permission-check
-    --push-retry="${KANIKO_PUSH_RETRIES}"
+    --push-retry="${KANIKO_PUSH_RETRIES:-10}"
     --destination="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
     --destination="${IMAGE_REPOSITORY}:${BUILD_NUMBER}"
     --destination="${IMAGE_REPOSITORY}:latest"
