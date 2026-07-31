@@ -108,16 +108,22 @@ for SERVICE in "${SERVICES[@]}"; do
     --single-snapshot
     --cache=true
     --cache-repo="${IMAGE_REPOSITORY}:cache"
-    --skip-tls-verify
+    --insecure
     --destination="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
     --destination="${IMAGE_REPOSITORY}:${BUILD_NUMBER}"
     --destination="${IMAGE_REPOSITORY}:latest"
   )
 
-  if [[ -n "${DOCKER_CONFIG:-}" ]]; then
-    KANIKO_ARGS+=(--dockerconfig="${DOCKER_CONFIG}")
-  elif [[ -d "/kaniko/.docker" ]]; then
-    KANIKO_ARGS+=(--dockerconfig="/kaniko/.docker")
+  KANIKO_DOCKER_CONFIG="${DOCKER_CONFIG:-}"
+  if [[ -z "${KANIKO_DOCKER_CONFIG}" ]] && [[ -d "/kaniko/.docker" ]]; then
+    KANIKO_DOCKER_CONFIG="/kaniko/.docker"
+  fi
+  if [[ -n "${KANIKO_DOCKER_CONFIG}" ]] && [[ -f "${KANIKO_DOCKER_CONFIG}/config.json" ]]; then
+    HTTP_CONFIG_DIR="$(mktemp -d)"
+    sed 's|https://ucjfrog|http://ucjfrog|g' "${KANIKO_DOCKER_CONFIG}/config.json" > "${HTTP_CONFIG_DIR}/config.json"
+    KANIKO_ARGS+=(--dockerconfig="${HTTP_CONFIG_DIR}")
+  elif [[ -n "${KANIKO_DOCKER_CONFIG}" ]]; then
+    KANIKO_ARGS+=(--dockerconfig="${KANIKO_DOCKER_CONFIG}")
   fi
 
   if [[ "${EXECUTOR_PREFIX[0]}" == "kubectl" ]]; then
