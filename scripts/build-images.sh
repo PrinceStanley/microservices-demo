@@ -69,9 +69,6 @@ fi
 
 POD_NAME="${POD_NAME:-$(hostname)}"
 
-KANIKO_PUSH_RETRIES="${KANIKO_PUSH_RETRIES:-10}"
-KANIKO_PUSH_RETRY_DELAY="${KANIKO_PUSH_RETRY_DELAY:-15}"
-
 if [[ -x "/kaniko/executor" ]]; then
   EXECUTOR_PREFIX=(/kaniko/executor)
 elif command -v kubectl >/dev/null 2>&1 && kubectl get pod "${POD_NAME}" >/dev/null 2>&1; then
@@ -87,6 +84,12 @@ for SERVICE in "${SERVICES[@]}"; do
   IMAGE_NAME="$(get_yaml_value "${SERVICES_FILE}" "${SERVICE}" "image")"
   if [[ -z "${SOURCE_DIR}" || "${SOURCE_DIR}" == "null" ]]; then
     echo "Skipping ${SERVICE}: no source path found." >&2
+    continue
+  fi
+
+  DOCKERFILE_ABS="${ROOT_DIR}/${DOCKERFILE}"
+  if [[ ! -f "${DOCKERFILE_ABS}" ]]; then
+    echo "Skipping ${SERVICE}: Dockerfile not found at ${DOCKERFILE_ABS}" >&2
     continue
   fi
 
@@ -146,40 +149,20 @@ with open(dst, 'w') as f:
 
   if [[ "${EXECUTOR_PREFIX[0]}" == "kubectl" ]]; then
     echo "Executing Kaniko via kubectl in pod ${POD_NAME}, container ${KANIKO_CONTAINER}" >&2
-    BUILD_EXIT_CODE=0
-    for attempt in $(seq 1 "${KANIKO_PUSH_RETRIES}"); do
-      set +e
-      if [[ -n "${JFROG_REGISTRY_HOST:-}" ]] && [[ -n "${JFROG_REGISTRY_IP:-}" ]]; then
-        kubectl exec "${POD_NAME}" -c "${KANIKO_CONTAINER}" -- /bin/sh -c \
-          "echo '${JFROG_REGISTRY_IP} ${JFROG_REGISTRY_HOST}' >> /etc/hosts" >/dev/null 2>&1 || true
-      fi
-      "${EXECUTOR_PREFIX[@]}" "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
-      BUILD_EXIT_CODE=$?
-      set -e
-      if [[ ${BUILD_EXIT_CODE} -eq 0 ]]; then
-        break
-      fi
-      if [[ ${attempt} -lt ${KANIKO_PUSH_RETRIES} ]]; then
-        echo "Kaniko push failed for ${SERVICE} (attempt ${attempt}/${KANIKO_PUSH_RETRIES}). Retrying in ${KANIKO_PUSH_RETRY_DELAY}s..." >&2
-        sleep "${KANIKO_PUSH_RETRY_DELAY}"
-      fi
-    done
+    set +e
+    if [[ -n "${JFROG_REGISTRY_HOST:-}" ]] && [[ -n "${JFROG_REGISTRY_IP:-}" ]]; then
+      kubectl exec "${POD_NAME}" -c "${KANIKO_CONTAINER}" -- /bin/sh -c \
+        "echo '${JFROG_REGISTRY_IP} ${JFROG_REGISTRY_HOST}' >> /etc/hosts" >/dev/null 2>&1 || true
+    fi
+    "${EXECUTOR_PREFIX[@]}" "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
+    BUILD_EXIT_CODE=$?
+    set -e
   else
     echo "Executing Kaniko directly in current container" >&2
-    BUILD_EXIT_CODE=0
-    for attempt in $(seq 1 "${KANIKO_PUSH_RETRIES}"); do
-      set +e
-      "${EXECUTOR_PREFIX[@]}" "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
-      BUILD_EXIT_CODE=$?
-      set -e
-      if [[ ${BUILD_EXIT_CODE} -eq 0 ]]; then
-        break
-      fi
-      if [[ ${attempt} -lt ${KANIKO_PUSH_RETRIES} ]]; then
-        echo "Kaniko push failed for ${SERVICE} (attempt ${attempt}/${KANIKO_PUSH_RETRIES}). Retrying in ${KANIKO_PUSH_RETRY_DELAY}s..." >&2
-        sleep "${KANIKO_PUSH_RETRY_DELAY}"
-      fi
-    done
+    set +e
+    "${EXECUTOR_PREFIX[@]}" "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
+    BUILD_EXIT_CODE=$?
+    set -e
   fi
 
   cat /tmp/kaniko-build.log
