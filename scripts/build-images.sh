@@ -117,6 +117,7 @@ for SERVICE in "${SERVICES[@]}"; do
     --cache=true
     --cache-repo="${IMAGE_REPOSITORY}:cache"
     --insecure
+    --skip-tls-verify-pull
     --skip-push-permission-check
     --push-retry="${KANIKO_PUSH_RETRIES:-10}"
     --destination="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
@@ -129,25 +130,10 @@ for SERVICE in "${SERVICES[@]}"; do
     KANIKO_DOCKER_CONFIG="/kaniko/.docker"
   fi
   if [[ -n "${KANIKO_DOCKER_CONFIG}" ]] && [[ -f "${KANIKO_DOCKER_CONFIG}/config.json" ]]; then
-    CLEAN_CONFIG_DIR="$(mktemp -d)"
-    python3 -c "
-import json, sys, os, shutil
-src = sys.argv[1]
-dst = sys.argv[2]
-cfg_dir = sys.argv[3]
-with open(src) as f:
-    cfg = json.load(f)
-for key in ['credHelpers', 'credsStore', 'HttpHeaders']:
-    cfg.pop(key, None)
-cfg['auths'] = {}
-for host in ['ucjfrog.exlservice.com', 'index.docker.io', 'docker.io', 'gcr.io', 'mcr.microsoft.com']:
-    cfg['auths'][host] = {}
-with open(dst, 'w') as f:
-    json.dump(cfg, f, indent=2)
-for fname in os.listdir(cfg_dir):
-    if fname != 'config.json' and 'credential' not in fname.lower() and 'credhelper' not in fname.lower():
-        shutil.copy(os.path.join(cfg_dir, fname), os.path.join(dst, fname))
-" "${KANIKO_DOCKER_CONFIG}/config.json" "${CLEAN_CONFIG_DIR}/config.json" "${KANIKO_DOCKER_CONFIG}"
+    CLEAN_CONFIG_DIR="/workspace/.kaniko-docker-config-${SERVICE}"
+    mkdir -p "${CLEAN_CONFIG_DIR}"
+    echo '{"auths":{}}' > "${CLEAN_CONFIG_DIR}/config.json"
+    echo "Created empty Docker config at ${CLEAN_CONFIG_DIR}" >&2
     KANIKO_ARGS+=(--dockerconfig="${CLEAN_CONFIG_DIR}")
   elif [[ -n "${KANIKO_DOCKER_CONFIG}" ]]; then
     KANIKO_ARGS+=(--dockerconfig="${KANIKO_DOCKER_CONFIG}")
@@ -178,6 +164,9 @@ for fname in os.listdir(cfg_dir):
   fi
   echo "Build complete for ${SERVICE}."
   echo "${SERVICE}|${IMAGE_REPOSITORY}:${IMAGE_TAG}" >> "${REPORT_DIR}/build-manifest.txt"
+  if [[ -n "${CLEAN_CONFIG_DIR:-}" ]] && [[ -d "${CLEAN_CONFIG_DIR}" ]]; then
+    rm -rf "${CLEAN_CONFIG_DIR}"
+  fi
 done
 
 echo "Image build pipeline completed."
