@@ -54,7 +54,7 @@ if [[ ! -f "${SERVICES_FILE}" ]]; then
     exit 1
 fi
 
-if [[ "${INITIAL_DEPLOYMENT}" == "true" ]]; then
+if [[ "${INITIAL_DEPLOYMENT}" == "true" ]] || { [[ -f ".deployment-mode" ]] && [[ "$(cat .deployment-mode 2>/dev/null || echo 'false')" == "true" ]]; }; then
     echo "Initial deployment requested; selecting enabled services."
     "${PYTHON_BIN}" "${PYTHON_SCRIPT}" --list-enabled-services "${SERVICES_FILE}" "${OUTPUT_FILE}"
     echo

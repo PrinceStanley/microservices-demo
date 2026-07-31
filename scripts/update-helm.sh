@@ -30,14 +30,24 @@ if [[ ! -f "${PYTHON_SCRIPT}" ]]; then
   exit 1
 fi
 
-if [[ ! -f "${CHANGED_FILE}" ]]; then
-  echo "Changed services file not found; skipping Helm update." >&2
-  exit 0
+if [[ -f "${CHANGED_FILE}" ]] && [[ -s "${CHANGED_FILE}" ]]; then
+  mapfile -t SERVICES < <(awk 'NF && $0 !~ /^#/ { print $0 }' "${CHANGED_FILE}" || true)
+else
+  DEPLOYMENT_MODE="$(cat .deployment-mode 2>/dev/null || echo 'false')"
+  if [[ "${DEPLOYMENT_MODE}" == "true" ]]; then
+    echo "Initial deployment mode; updating Helm values for all enabled services."
+    out_file="$(mktemp)"
+    "${PYTHON_BIN}" "${PYTHON_SCRIPT}" --list-enabled-services "${SERVICES_FILE}" "$out_file"
+    mapfile -t SERVICES < <(awk 'NF && $0 !~ /^#/ { print $0 }' "$out_file" || true)
+    rm -f "$out_file"
+  else
+    echo "Changed services file not found; skipping Helm update." >&2
+    exit 0
+  fi
 fi
 
-mapfile -t SERVICES < <(awk 'NF && $0 !~ /^#/ { print $0 }' "${CHANGED_FILE}" || true)
 if [[ ${#SERVICES[@]} -eq 0 ]]; then
-  echo "No changed services detected; skipping Helm update."
+  echo "No services to update; skipping Helm update."
   exit 0
 fi
 
