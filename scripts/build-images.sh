@@ -121,13 +121,13 @@ for SERVICE in "${SERVICES[@]}"; do
   if [[ "${EXECUTOR_PREFIX[0]}" == "kubectl" ]]; then
     echo "Executing Kaniko via kubectl in pod ${POD_NAME}, container ${KANIKO_CONTAINER}" >&2
     set +e
-    "${EXECUTOR_PREFIX[@]}" /kaniko/executor "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
+    "${EXECUTOR_PREFIX[@]}" "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
     BUILD_EXIT_CODE=$?
     set -e
   else
     echo "Executing Kaniko directly in current container" >&2
     set +e
-    /kaniko/executor "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
+    "${EXECUTOR_PREFIX[@]}" "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
     BUILD_EXIT_CODE=$?
     set -e
   fi
