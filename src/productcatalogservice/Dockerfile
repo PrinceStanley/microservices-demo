@@ -30,7 +30,7 @@ ARG SKAFFOLD_GO_GCFLAGS
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /productcatalogservice .
 
 #FROM gcr.io/distroless/static
-FROM alpine
+FROM istio/distroless
 WORKDIR /src
 COPY --from=builder /productcatalogservice ./server
 COPY products.json .
