@@ -31,7 +31,7 @@ ARG SKAFFOLD_GO_GCFLAGS
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /checkoutservice .
 
 #FROM gcr.io/distroless/static
-FROM ucjfrog.exlservice.com/idp-sandbox/distroless/static
+FROM yprinceee0205/distroless
 
 WORKDIR /src
 COPY --from=builder /checkoutservice /src/checkoutservice
