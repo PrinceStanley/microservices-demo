@@ -109,6 +109,7 @@ for SERVICE in "${SERVICES[@]}"; do
     --cache=true
     --cache-repo="${IMAGE_REPOSITORY}:cache"
     --insecure
+    --skip-push-check
     --destination="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
     --destination="${IMAGE_REPOSITORY}:${BUILD_NUMBER}"
     --destination="${IMAGE_REPOSITORY}:latest"
@@ -119,9 +120,22 @@ for SERVICE in "${SERVICES[@]}"; do
     KANIKO_DOCKER_CONFIG="/kaniko/.docker"
   fi
   if [[ -n "${KANIKO_DOCKER_CONFIG}" ]] && [[ -f "${KANIKO_DOCKER_CONFIG}/config.json" ]]; then
-    HTTP_CONFIG_DIR="$(mktemp -d)"
-    sed 's|https://ucjfrog|http://ucjfrog|g' "${KANIKO_DOCKER_CONFIG}/config.json" > "${HTTP_CONFIG_DIR}/config.json"
-    KANIKO_ARGS+=(--dockerconfig="${HTTP_CONFIG_DIR}")
+    CLEAN_CONFIG_DIR="$(mktemp -d)"
+    python3 -c "
+import json, sys, os
+src = sys.argv[1]
+dst = sys.argv[2]
+with open(src) as f:
+    cfg = json.load(f)
+auths = cfg.get('auths', {})
+clean = {'auths': {}}
+for host, info in auths.items():
+    clean_host = host.replace('https://', 'http://').replace('http://', '')
+    clean['auths'][clean_host] = info
+with open(dst, 'w') as f:
+    json.dump(clean, f)
+" "${KANIKO_DOCKER_CONFIG}/config.json" "${CLEAN_CONFIG_DIR}/config.json"
+    KANIKO_ARGS+=(--dockerconfig="${CLEAN_CONFIG_DIR}")
   elif [[ -n "${KANIKO_DOCKER_CONFIG}" ]]; then
     KANIKO_ARGS+=(--dockerconfig="${KANIKO_DOCKER_CONFIG}")
   fi
