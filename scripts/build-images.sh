@@ -114,8 +114,10 @@ for SERVICE in "${SERVICES[@]}"; do
     --dockerfile="${ROOT_DIR}/${DOCKERFILE}"
     --reproducible
     --single-snapshot
+    --snapshot-mode=time
+    --compressed-caching
     --cache=true
-    --cache-repo="${IMAGE_REPOSITORY}:cache"
+    --cache-repo="${IMAGE_REPOSITORY}"
     --insecure
     --skip-tls-verify-pull
     --skip-push-permission-check
