@@ -69,10 +69,13 @@ fi
 
 POD_NAME="${POD_NAME:-$(hostname)}"
 
-if command -v kubectl >/dev/null 2>&1 && kubectl get pod "${POD_NAME}" >/dev/null 2>&1; then
-  EXECUTOR_PREFIX=(kubectl exec "${POD_NAME}" -c "${KANIKO_CONTAINER}" -- /busybox/sh -c)
-else
+if [[ -x "/kaniko/executor" ]]; then
   EXECUTOR_PREFIX=(/kaniko/executor)
+elif command -v kubectl >/dev/null 2>&1 && kubectl get pod "${POD_NAME}" >/dev/null 2>&1; then
+  EXECUTOR_PREFIX=(kubectl exec "${POD_NAME}" -c "${KANIKO_CONTAINER}" -- /kaniko/executor)
+else
+  echo "ERROR: Neither local /kaniko/executor nor kubectl exec is available." >&2
+  exit 1
 fi
 
 for SERVICE in "${SERVICES[@]}"; do
@@ -116,12 +119,24 @@ for SERVICE in "${SERVICES[@]}"; do
   fi
 
   if [[ "${EXECUTOR_PREFIX[0]}" == "kubectl" ]]; then
-    "${EXECUTOR_PREFIX[@]}" "cd /workspace && /kaniko/executor ${KANIKO_ARGS[*]}" >/tmp/kaniko-build.log 2>&1
+    echo "Executing Kaniko via kubectl in pod ${POD_NAME}, container ${KANIKO_CONTAINER}" >&2
+    set +e
+    "${EXECUTOR_PREFIX[@]}" /kaniko/executor "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
+    BUILD_EXIT_CODE=$?
+    set -e
   else
+    echo "Executing Kaniko directly in current container" >&2
+    set +e
     /kaniko/executor "${KANIKO_ARGS[@]}" >/tmp/kaniko-build.log 2>&1
+    BUILD_EXIT_CODE=$?
+    set -e
   fi
 
   cat /tmp/kaniko-build.log
+  if [[ ${BUILD_EXIT_CODE:-0} -ne 0 ]]; then
+    echo "Kaniko build failed for ${SERVICE} with exit code ${BUILD_EXIT_CODE}" >&2
+    exit ${BUILD_EXIT_CODE}
+  fi
   echo "Build complete for ${SERVICE}."
   echo "${SERVICE}|${IMAGE_REPOSITORY}:${IMAGE_TAG}" >> "${REPORT_DIR}/build-manifest.txt"
 done

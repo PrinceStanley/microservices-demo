@@ -13,7 +13,6 @@ pipeline {
         REGISTRY = "ucjfrog.exlservice.com"
         REPOSITORY = "idp-sandbox"
         IMAGE_NAMESPACE = "online-boutique"
-        IMAGE_TAG = "${env.GIT_COMMIT_SHORT ?: 'latest'}"
         NAMESPACE = "online-boutique"
         ARGOCD_APP_NAME = "online-boutique"
         INITIAL_DEPLOYMENT = "false"
