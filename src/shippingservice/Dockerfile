@@ -30,7 +30,7 @@ ARG SKAFFOLD_GO_GCFLAGS
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags="-s -w" -gcflags="${SKAFFOLD_GO_GCFLAGS}" -o /go/bin/shippingservice .
 
 #FROM gcr.io/distroless/static
-FROM chainguard/static:latest
+FROM alpine
 
 WORKDIR /src
 COPY --from=builder /go/bin/shippingservice /src/shippingservice
