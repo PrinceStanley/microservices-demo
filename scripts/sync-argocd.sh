@@ -23,8 +23,16 @@ fi
 argocd login "${ARGOCD_SERVER}:${ARGOCD_PORT}" \
   --username "${ARGOCD_USERNAME}" \
   --password "${ARGOCD_PASSWORD}" \
-  --plaintext \
-  --grpc-web
+  --plaintext
+
+if ! argocd app get "${ARGOCD_APP_NAME}" >/dev/null 2>&1; then
+    echo "ArgoCD application ${ARGOCD_APP_NAME} does not exist, creating..."
+    argocd app create "${ARGOCD_APP_NAME}" \
+      --dest-server https://kubernetes.default.svc \
+      --dest-namespace "${NAMESPACE:-online-boutique}" \
+      --sync-policy automated \
+      --upsert || true
+fi
 
 argocd app sync "${ARGOCD_APP_NAME}" --prune --retry-limit 3 --timeout 600
 argocd app wait "${ARGOCD_APP_NAME}" --health --sync --timeout 600
