@@ -23,7 +23,7 @@ for SERVICE in "${SERVICES[@]}"; do
   kubectl -n "${NAMESPACE}" rollout status "deploy/${SERVICE}" --timeout="${TIMEOUT_SECONDS}s" || exit 1
   kubectl -n "${NAMESPACE}" get svc "${SERVICE}" >/dev/null || exit 1
   kubectl -n "${NAMESPACE}" get virtualservice "${SERVICE}" >/dev/null 2>&1 || true
-  kubectl -n "${NAMESPACE}" get destinationrule "${SERVICE}" >/dev/null 2>&1 || true
+  #kubectl -n "${NAMESPACE}" get destinationrule "${SERVICE}" >/dev/null 2>&1 || true
   echo "Deployment validated for ${SERVICE}."
 done
 
