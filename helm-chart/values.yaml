@@ -127,10 +127,10 @@ frontend:
     hosts:
     - "*"
     gateway:
-      name: asm-ingressgateway
-      namespace: asm-ingress
-      labelKey: asm
-      labelValue: ingressgateway
+      name: istio-ingressgateway
+      namespace: istio-ingress
+      labelKey: istio
+      labelValue: ingress
   resources:
     requests:
       cpu: 100m
