@@ -321,27 +321,21 @@ pipeline {
            }
        }
 
-       /**********************************************************************
-        * Sync ArgoCD Application
-        *********************************************************************/
+        /*********************************************************************
+         * Sync ArgoCD Application
+         *********************************************************************/
         stage('Sync ArgoCD Application') {
-            when {
-                expression {
-                    def deploymentMode = fileExists('.deployment-mode') ? readFile('.deployment-mode').trim() : 'false'
-                    return deploymentMode == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
+            steps {
+                container('builder') {
+                    withCredentials([string(credentialsId: 'argocd-admin-password', variable: 'ARGOCD_PASSWORD')]) {
+                        sh '''
+                            chmod +x scripts/sync-argocd.sh
+                            ARGOCD_PASSWORD="${ARGOCD_PASSWORD}" ./scripts/sync-argocd.sh
+                        '''
+                    }
                 }
             }
-           steps {
-               container('builder') {
-                   withCredentials([string(credentialsId: 'argocd-admin-password', variable: 'ARGOCD_PASSWORD')]) {
-                       sh '''
-                           chmod +x scripts/sync-argocd.sh
-                           ARGOCD_PASSWORD="${ARGOCD_PASSWORD}" ./scripts/sync-argocd.sh
-                       '''
-                   }
-               }
-           }
-       }
+        }
 
        /**********************************************************************
         * Validate Deployment Rollout

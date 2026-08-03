@@ -23,15 +23,23 @@ fi
 argocd login "${ARGOCD_SERVER}:${ARGOCD_PORT}" \
   --username "${ARGOCD_USERNAME}" \
   --password "${ARGOCD_PASSWORD}" \
-  --plaintext
+  --plaintext \
+  --grpc-web
+
+NAMESPACE="${NAMESPACE:-online-boutique}"
 
 if ! argocd app get "${ARGOCD_APP_NAME}" >/dev/null 2>&1; then
     echo "ArgoCD application ${ARGOCD_APP_NAME} does not exist, creating..."
-    argocd app create "${ARGOCD_APP_NAME}" \
+    if ! argocd app create "${ARGOCD_APP_NAME}" \
+      --repo https://github.com/GoogleCloudPlatform/microservices-demo \
+      --path helm-chart \
       --dest-server https://kubernetes.default.svc \
-      --dest-namespace "${NAMESPACE:-online-boutique}" \
+      --dest-namespace "${NAMESPACE}" \
       --sync-policy automated \
-      --upsert || true
+      --upsert 2>/dev/null; then
+      echo "WARNING: Failed to create ArgoCD application. This may be because no git repository is configured in ArgoCD."
+      echo "Please add a repository in ArgoCD UI (Settings > Repositories) or configure the correct repo URL in sync-argocd.sh."
+    fi
 fi
 
 argocd app sync "${ARGOCD_APP_NAME}" --prune --retry-limit 3 --timeout 600
