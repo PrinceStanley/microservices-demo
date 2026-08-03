@@ -263,7 +263,7 @@ spec:
 {{- end }}
 {{- if .Values.frontend.virtualService.create }}
 ---
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: {{ .Values.frontend.name }}

@@ -12,13 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: networking.istio.io/v1alpha3
+#apiVersion: networking.istio.io/v1
+#kind: VirtualService
+#metadata:
+#  name: frontend
+#spec:
+#  hosts:
+#  - "frontend.default.svc.cluster.local"
+#  http:
+#  - route:
+#    - destination:
+#        host: frontend
+#        port:
+#          number: 80
+#---
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
-  name: frontend
+  name: frontend-ingress
+  namespace: online-boutique
 spec:
   hosts:
-  - "frontend.default.svc.cluster.local"
+  - "shop.exlservice.com"
+  gateways:
+  - frontend-gateway
   http:
   - route:
     - destination:
