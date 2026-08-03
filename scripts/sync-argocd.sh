@@ -31,7 +31,7 @@ NAMESPACE="${NAMESPACE:-online-boutique}"
 if ! argocd app get "${ARGOCD_APP_NAME}" >/dev/null 2>&1; then
     echo "ArgoCD application ${ARGOCD_APP_NAME} does not exist, creating..."
     if ! argocd app create "${ARGOCD_APP_NAME}" \
-      --repo https://github.com/GoogleCloudPlatform/microservices-demo \
+      --repo https://github.com/PrinceStanley/microservices-demo \
       --path helm-chart \
       --dest-server https://kubernetes.default.svc \
       --dest-namespace "${NAMESPACE}" \
