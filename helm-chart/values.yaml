@@ -123,12 +123,12 @@ frontend:
   platform: local
   singleSharedSession: false
   virtualService:
-    create: false
+    create: true
     hosts:
-    - "*"
+    - "shop.exlservice.com"
     gateway:
-      name: istio-ingressgateway
-      namespace: istio-ingress
+      name: frontend-gateway
+      namespace: online-boutique
       labelKey: istio
       labelValue: ingress
   resources:

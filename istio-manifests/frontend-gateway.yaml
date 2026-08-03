@@ -12,28 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
   name: frontend-gateway
+  namespace: online-boutique
 spec:
   selector:
-    istio: ingressgateway # use Istio default gateway implementation
+    istio: ingress # use Istio default gateway implementation
   servers:
   - port:
       number: 80
       name: http
       protocol: HTTP
     hosts:
-    - "*"
+    - "shop.exlservice.com"
 ---
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: frontend-ingress
+  namespace: online-boutique
 spec:
   hosts:
-  - "*"
+  - "shop.exlservice.com"
   gateways:
   - frontend-gateway
   http:
