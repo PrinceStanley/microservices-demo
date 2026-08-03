@@ -62,8 +62,8 @@ fi
 if ! kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1; then
   echo "Creating namespace ${NAMESPACE} for the initial deployment."
   kubectl create namespace "${NAMESPACE}"
-  echo "Applying istio-injection namespace label ${NAMESPACE} for the initial deployment."
-  kubectl label namespace "${NAMESPACE}" istio-injection=enabled
+  echo "Applying istio-injector label to namespace ${NAMESPACE}."
+  kubectl label namespace "${NAMESPACE}" istio-injection=enabled --overwrite
 fi
 
 if [[ -f "${CHANGED_FILE}" ]] && [[ -s "${CHANGED_FILE}" ]]; then
@@ -93,3 +93,11 @@ helm upgrade --install "${HELM_RELEASE}" "${HELM_CHART_DIR}" \
   -f "${HELM_VALUES_FILE}"
 
 echo "Helm deployment completed for ${HELM_RELEASE}."
+
+echo "Create VirtualService for frontend service if it does not exist."
+if ! kubectl -n "${NAMESPACE}" get virtualservice frontend >/dev/null 2>&1; then
+  echo "Creating VirtualService for frontend service."
+  kubectl -n "${NAMESPACE}" apply -f istio-manifests/frontend-gateway.yaml
+else
+  echo "VirtualService for frontend service already exists; skipping creation."
+fi

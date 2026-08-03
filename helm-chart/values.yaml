@@ -123,7 +123,7 @@ frontend:
   platform: local
   singleSharedSession: false
   virtualService:
-    create: true
+    create: false
     hosts:
     - "shop.exlservice.com"
     gateway:
