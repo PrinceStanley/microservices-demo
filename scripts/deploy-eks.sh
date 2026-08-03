@@ -62,9 +62,6 @@ fi
 if ! kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1; then
   echo "Creating namespace ${NAMESPACE} for the initial deployment."
   kubectl create namespace "${NAMESPACE}"
-fi
-
-if ! kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1; then
   echo "Applying istio-injection namespace label ${NAMESPACE} for the initial deployment."
   kubectl label namespace "${NAMESPACE}" istio-injection=enabled
 fi
