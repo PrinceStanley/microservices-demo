@@ -337,25 +337,19 @@ pipeline {
             }
         }
 
-       /**********************************************************************
-        * Validate Deployment Rollout
-        *********************************************************************/
+        /**********************************************************************
+         * Validate Deployment Rollout
+         *********************************************************************/
         stage('Validate Deployment Rollout') {
-            when {
-                expression {
-                    def deploymentMode = fileExists('.deployment-mode') ? readFile('.deployment-mode').trim() : 'false'
-                    return deploymentMode == 'true' || (fileExists(env.CHANGED_FILE) && readFile(env.CHANGED_FILE).trim())
+            steps {
+                container('builder') {
+                    sh '''
+                        chmod +x scripts/validate-deployment.sh
+                        ./scripts/validate-deployment.sh
+                    '''
                 }
             }
-           steps {
-               container('builder') {
-                   sh '''
-                       chmod +x scripts/validate-deployment.sh
-                       ./scripts/validate-deployment.sh
-                   '''
-               }
-           }
-       }
+        }
     }
     post {
         always {
