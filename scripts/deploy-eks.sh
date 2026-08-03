@@ -10,7 +10,7 @@ NAMESPACE="${NAMESPACE:-}"
 HELM_RELEASE="${HELM_RELEASE:-online-boutique}"
 HELM_VALUES_FILE="${HELM_VALUES_FILE:-helm-chart/values.yaml}"
 HELM_CHART_DIR="${HELM_CHART_DIR:-helm-chart}"
-TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-900}"
+TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-1800}"
 
 PYTHON_BIN="${PYTHON_BIN:-}"
 if [[ -z "${PYTHON_BIN}" ]]; then
@@ -62,6 +62,11 @@ fi
 if ! kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1; then
   echo "Creating namespace ${NAMESPACE} for the initial deployment."
   kubectl create namespace "${NAMESPACE}"
+fi
+
+if ! kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1; then
+  echo "Applying istio-injection namespace label ${NAMESPACE} for the initial deployment."
+  kubectl label namespace "${NAMESPACE}" istio-injection=enabled
 fi
 
 if [[ -f "${CHANGED_FILE}" ]] && [[ -s "${CHANGED_FILE}" ]]; then
