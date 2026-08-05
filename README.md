@@ -138,6 +138,11 @@ Find **Protocol Buffers Descriptions** at the [`./protos` directory](/protos).
 
 - [Development](/docs/development-guide.md) to learn how to run and develop this app locally.
 
+## IDP Platform Architecture and Flow diagram
+
+[![Architecture of
+IDP Platform](/docs/img/IDP-Platform-Architecture.jpg)](/docs/img/IDP-Platform-Architecture.jpg)
+
 ## Demos featuring Online Boutique
 
 - [Security hardening of the OnlineBoutique sample apps with the Docker Hardened Images (DHI)](https://medium.com/google-cloud/security-hardening-of-the-onlineboutique-sample-apps-with-docker-hardened-images-dhi-ca1fad348343)
